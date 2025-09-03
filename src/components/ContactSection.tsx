@@ -42,7 +42,7 @@ const ContactSection = () => {
     e.preventDefault();
     
     // Create Tally form URL with pre-filled data
-    const tallyUrl = "https://tally.so/r/mRKDRJ"; // You'll need to replace this with actual Tally form URL
+    const tallyUrl = "https://tally.so/r/mO6qQk"; // Actual Tally form URL
     
     // For now, show success message
     toast({
