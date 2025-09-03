@@ -184,7 +184,7 @@ const ContactSection = () => {
                       onChange={handleInputChange}
                       required
                       className="mt-1"
-                      placeholder="+1 407-394-0171"
+                      placeholder="ex: +1 000-000-0000"
                     />
                   </div>
 
@@ -199,7 +199,7 @@ const ContactSection = () => {
                       onChange={handleInputChange}
                       required
                       className="mt-1"
-                      placeholder="33896"
+                      placeholder="ex: 00000"
                     />
                   </div>
 
