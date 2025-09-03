@@ -7,7 +7,10 @@ app = Flask(__name__)
 
 @app.route("/send-email", methods=["POST"])
 def send_email():
-    data = request.get_json()
+    data = request.get_json(force=True)  # força a leitura mesmo que o header esteja faltando
+    if not data:
+        return jsonify({"success": False, "error": "No data received"}), 400
+
 
     sender_email = "contact@davensolutions.com"   # remetente (sua conta de envio)
     receiver_email = "contact@davensolutions.com" # destinatário (você mesmo)
