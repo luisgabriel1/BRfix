@@ -53,7 +53,7 @@ const HeroSection = () => {
               variant="outline" 
               size="lg"
               onClick={scrollToServices}
-              className="text-lg px-8 py-6 border-white text-white hover:bg-white hover:text-foreground"
+              className="text-lg px-8 py-6 border-white text-black hover:bg-white hover:text-foreground"
             >
               Our Services
             </Button>
