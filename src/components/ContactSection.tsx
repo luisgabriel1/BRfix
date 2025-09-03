@@ -38,30 +38,60 @@ const ContactSection = () => {
     setFiles(prev => prev.filter((_, i) => i !== index));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Create Tally form URL with pre-filled data
-    const tallyUrl = "https://tally.so/r/mO6qQk"; // Actual Tally form URL
-    
-    // For now, show success message
-    toast({
-      title: "Quote Request Submitted!",
-      description: "We'll contact you within 24 hours to discuss your project.",
-      duration: 5000,
-    });
 
-    // Reset form
-    setFormData({
-      name: "",
-      email: "",
-      address: "",
-      phone: "",
-      description: "",
-      observations: ""
-    });
-    setFiles([]);
+    try {
+      // prepara os dados para enviar ao backend
+      const res = await fetch("http://localhost:5000/send-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: formData.name,
+          email: formData.email,
+          phone: formData.phone,
+          address: formData.address,
+          description: formData.description,
+          observations: formData.observations,
+        }),
+      });
+
+      const result = await res.json();
+
+      if (result.success) {
+        toast({
+          title: "Quote Request Submitted!",
+          description: "We'll contact you within 24 hours to discuss your project.",
+          duration: 5000,
+        });
+
+        // limpa os campos
+        setFormData({
+          name: "",
+          email: "",
+          address: "",
+          phone: "",
+          description: "",
+          observations: "",
+        });
+        setFiles([]);
+      } else {
+        toast({
+          title: "Error",
+          description: result.error || "Failed to send message.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error(error);
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred.",
+        variant: "destructive",
+      });
+    }
   };
+
 
   return (
     <section id="contact" className="py-20 bg-muted/30">
