@@ -68,7 +68,7 @@ const GallerySection = () => {
             <Card 
               key={index} 
               className="overflow-hidden hover:shadow-professional transition-all duration-300 hover:-translate-y-2 cursor-pointer group"
-              onClick={() => setSelectedImage(index)}
+              onClick={() => window.open('https://web.facebook.com/profile.php?id=61580065559981', '_blank')}
             >
               <div className="relative overflow-hidden">
                 <img 

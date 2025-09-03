@@ -21,7 +21,7 @@ const Navigation = () => {
             <div className="w-10 h-10 bg-gradient-hero rounded-lg flex items-center justify-center">
               <Home className="w-6 h-6 text-primary-foreground" />
             </div>
-            <span className="text-xl font-bold text-foreground">Daven Home Solutions</span>
+            <span className="text-xl font-bold text-foreground">BRfix</span>
           </div>
 
           {/* Desktop Navigation */}

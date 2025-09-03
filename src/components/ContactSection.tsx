@@ -11,6 +11,7 @@ const ContactSection = () => {
   const { toast } = useToast();
   const [formData, setFormData] = useState({
     name: "",
+    email: "",
     address: "",
     phone: "",
     description: "",
@@ -53,6 +54,7 @@ const ContactSection = () => {
     // Reset form
     setFormData({
       name: "",
+      email: "",
       address: "",
       phone: "",
       description: "",
@@ -85,7 +87,7 @@ const ContactSection = () => {
                   </div>
                   <div>
                     <h3 className="font-semibold text-card-foreground">Phone</h3>
-                    <p className="text-muted-foreground">(123) 456-7890</p>
+                    <p className="text-muted-foreground">+1 407-394-0171</p>
                     <p className="text-sm text-muted-foreground">Available 24/7 for emergencies</p>
                   </div>
                 </div>
@@ -96,7 +98,7 @@ const ContactSection = () => {
                   </div>
                   <div>
                     <h3 className="font-semibold text-card-foreground">Email</h3>
-                    <p className="text-muted-foreground">info@davensolutions.com</p>
+                    <p className="text-muted-foreground">contact@davensolutions.com</p>
                     <p className="text-sm text-muted-foreground">We respond within 24 hours</p>
                   </div>
                 </div>
@@ -106,9 +108,9 @@ const ContactSection = () => {
                     <MapPin className="w-5 h-5 text-primary-foreground" />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-card-foreground">Service Area</h3>
-                    <p className="text-muted-foreground">Greater Metro Area</p>
-                    <p className="text-sm text-muted-foreground">Free estimates within 25 miles</p>
+                    <h3 className="font-semibold text-card-foreground">Zip Code</h3>
+                    <p className="text-muted-foreground">33896</p>
+                    <p className="text-sm text-muted-foreground">Free estimates within service area</p>
                   </div>
                 </div>
 
@@ -118,8 +120,12 @@ const ContactSection = () => {
                   </div>
                   <div>
                     <h3 className="font-semibold text-card-foreground">Business Hours</h3>
-                    <p className="text-muted-foreground">Mon-Fri: 7AM - 7PM</p>
-                    <p className="text-muted-foreground">Sat-Sun: 8AM - 5PM</p>
+                    <p className="text-muted-foreground">8:00am - 8:00pm</p>
+                    <p className="text-muted-foreground">Monday - Saturday</p>
+                    <div className="mt-2 p-2 bg-muted rounded">
+                      <p className="text-xs font-medium">24/7 Support Available:</p>
+                      <p className="text-xs text-muted-foreground">Email • SMS • WhatsApp</p>
+                    </div>
                   </div>
                 </div>
               </CardContent>
@@ -150,25 +156,41 @@ const ContactSection = () => {
                       />
                     </div>
                     <div>
-                      <Label htmlFor="phone" className="text-sm font-medium text-card-foreground">
-                        Phone Number *
+                      <Label htmlFor="email" className="text-sm font-medium text-card-foreground">
+                        Email Address *
                       </Label>
                       <Input
-                        id="phone"
-                        name="phone"
-                        type="tel"
-                        value={formData.phone}
+                        id="email"
+                        name="email"
+                        type="email"
+                        value={formData.email}
                         onChange={handleInputChange}
                         required
                         className="mt-1"
-                        placeholder="(123) 456-7890"
+                        placeholder="your.email@example.com"
                       />
                     </div>
                   </div>
 
                   <div>
+                    <Label htmlFor="phone" className="text-sm font-medium text-card-foreground">
+                      Phone Number *
+                    </Label>
+                    <Input
+                      id="phone"
+                      name="phone"
+                      type="tel"
+                      value={formData.phone}
+                      onChange={handleInputChange}
+                      required
+                      className="mt-1"
+                      placeholder="+1 407-394-0171"
+                    />
+                  </div>
+
+                  <div>
                     <Label htmlFor="address" className="text-sm font-medium text-card-foreground">
-                      Property Address *
+                      Zip Code *
                     </Label>
                     <Input
                       id="address"
@@ -177,7 +199,7 @@ const ContactSection = () => {
                       onChange={handleInputChange}
                       required
                       className="mt-1"
-                      placeholder="Enter your property address"
+                      placeholder="33896"
                     />
                   </div>
 
@@ -264,7 +286,7 @@ const ContactSection = () => {
                   </Button>
 
                   <p className="text-sm text-muted-foreground text-center">
-                    By submitting this form, you agree to be contacted by Daven Home Solutions regarding your project.
+                    By submitting this form, you agree to be contacted by BRfix regarding your project.
                   </p>
                 </form>
               </CardContent>
