@@ -264,7 +264,7 @@ const ContactSection = () => {
                               <span className="text-sm text-muted-foreground truncate">{file.name}</span>
                               <Button
                                 type="button"
-                                variant="ghost" 
+                                variant="secondary"
                                 size="sm"
                                 onClick={() => removeFile(index)}
                               >
