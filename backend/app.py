@@ -1,59 +1,74 @@
 from flask import Flask, request, jsonify
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
 from flask_cors import CORS
+from email.message import EmailMessage
+from dotenv import load_dotenv
+import smtplib
+import os
+
+# Carrega variáveis do .env (apenas ambiente local)
+load_dotenv()
+
+# Lê as variáveis de ambiente (Zoho)
+SMTP_HOST = os.getenv("SMTP_HOST", "smtp.zoho.com")
+SMTP_PORT = int(os.getenv("SMTP_PORT", "465"))  # 465 (SSL) ou 587 (TLS c/ starttls)
+SMTP_USER = os.getenv("SMTP_USER")              # ex: contact@davensolutions.com
+SMTP_PASS = os.getenv("SMTP_PASS")              # App Password Zoho
+TO_EMAIL  = os.getenv("TO_EMAIL", SMTP_USER)    # para quem enviar (você)
+
 app = Flask(__name__)
 
-CORS (app)
+# Em dev pode deixar aberto; em produção você pode restringir p/ seu domínio da Vercel
+CORS(app)  
+# Exemplo mais restrito:
+# CORS(app, resources={r"/*": {"origins": ["http://localhost:3000", "https://SEU-DOMINIO.vercel.app"]}})
 
-@app.route("/send-email", methods=["POST"])
+@app.route("/send-email", methods=["POST", "OPTIONS"])
 def send_email():
-    data = request.get_json(force=True)  # força a leitura mesmo que o header esteja faltando
-    if not data:
-        return jsonify({"success": False, "error": "No data received"}), 400
+    # Pré-flight CORS
+    if request.method == "OPTIONS":
+        return ("", 204)
 
+    data = request.get_json(silent=True) or {}
+    required = ["name", "email", "phone", "address", "description"]
+    missing = [k for k in required if not data.get(k)]
+    if missing:
+        return jsonify({"success": False, "error": f"Missing: {', '.join(missing)}"}), 400
 
-    sender_email = "contact@davensolutions.com"   # remetente (sua conta de envio)
-    receiver_email = "contact@davensolutions.com" # destinatário (você mesmo)
-    password = "iQ6fsWWDbBLE"
+    # Monta o e-mail
+    msg = EmailMessage()
+    msg["Subject"] = f"New Quote Request — {data.get('name')}"
+    msg["From"] = SMTP_USER
+    msg["To"] = TO_EMAIL
+    if data.get("email"):
+        msg["Reply-To"] = data["email"]
 
-    # título do email
-    subject = f"New Quote Request from {data['name']}"
+    body = f"""New Quote Request
 
-    # corpo do email com todos os campos do formulário
-    body = f"""
-    📩 New Quote Request Received
+Full Name: {data.get('name')}
+Email: {data.get('email')}
+Phone: {data.get('phone')}
+Zip Code: {data.get('address')}
 
-    Full Name: {data.get('name')}
-    Email: {data.get('email')}
-    Phone: {data.get('phone')}
-    Zip Code: {data.get('address')}
-    Project Description:
-    {data.get('description')}
+Project Description:
+{data.get('description')}
 
-    Additional Notes / Visit Observations:
-    {data.get('observations')}
-    """
-
-    # configura a mensagem
-    msg = MIMEMultipart()
-    msg["From"] = sender_email
-    msg["To"] = receiver_email
-    msg["Subject"] = subject
-    msg["Reply-To"] = data.get("email")
-
-    msg.attach(MIMEText(body, "plain"))
+Additional Notes / Visit Observations:
+{data.get('observations', '')}
+"""
+    msg.set_content(body)
 
     try:
-        # se for Zoho
-        with smtplib.SMTP_SSL("smtp.zoho.com", 465) as server:
-            server.login(sender_email, password)
-            server.sendmail(sender_email, receiver_email, msg.as_string())
+        # SSL direto (porta 465)
+        with smtplib.SMTP_SSL(SMTP_HOST, SMTP_PORT) as smtp:
+            smtp.login(SMTP_USER, SMTP_PASS)
+            smtp.send_message(msg)
 
-        return jsonify({"success": True})
+        return jsonify({"success": True}), 200
+
     except Exception as e:
-        return jsonify({"success": False, "error": str(e)})
+        # Dica: ver o log de erro no Render se algo falhar
+        return jsonify({"success": False, "error": str(e)}), 500
 
-if __name__ == "__main__":
-    app.run(debug=True)
+@app.get("/health")
+def health():
+    return {"status": "ok"}
