@@ -8,12 +8,12 @@ import os
 # Carrega variáveis do .env (apenas ambiente local)
 load_dotenv()
 
-# Lê as variáveis de ambiente (Zoho)
-SMTP_HOST = os.getenv("SMTP_HOST", "smtp.zoho.com")
-SMTP_PORT = int(os.getenv("SMTP_PORT", "465"))  # 465 (SSL) ou 587 (TLS c/ starttls)
-SMTP_USER = os.getenv("SMTP_USER")              # ex: contact@davensolutions.com
-SMTP_PASS = os.getenv("SMTP_PASS")              # App Password Zoho
-TO_EMAIL  = os.getenv("TO_EMAIL", SMTP_USER)    # para quem enviar (você)
+# Configurações do Zoho Email
+SMTP_HOST = "smtp.zoho.com"
+SMTP_PORT = 465  # SSL
+SMTP_USER = "contact@davensolutions.com"
+SMTP_PASS = "iQ6fsWWDbBLE"  # App Password Zoho
+TO_EMAIL = "contact@davensolutions.com"  # Seu email para receber as mensagens
 
 app = Flask(__name__)
 
@@ -34,27 +34,44 @@ def send_email():
     if missing:
         return jsonify({"success": False, "error": f"Missing: {', '.join(missing)}"}), 400
 
-    # Monta o e-mail
+    # Monta o e-mail com formatação profissional
     msg = EmailMessage()
-    msg["Subject"] = f"New Quote Request — {data.get('name')}"
+    msg["Subject"] = f"🏠 New Quote Request — {data.get('name')}"
     msg["From"] = SMTP_USER
     msg["To"] = TO_EMAIL
     if data.get("email"):
         msg["Reply-To"] = data["email"]
 
-    body = f"""New Quote Request
+    body = f"""
+═══════════════════════════════════════════════════════════════
+📧 NEW QUOTE REQUEST RECEIVED - BRFIX
+═══════════════════════════════════════════════════════════════
 
-Full Name: {data.get('name')}
-Email: {data.get('email')}
-Phone: {data.get('phone')}
-Zip Code: {data.get('address')}
+👤 CLIENT INFORMATION:
+───────────────────────────────────────
+   Full Name: {data.get('name')}
+   Email: {data.get('email')}
+   Phone: {data.get('phone')}
+   Zip Code: {data.get('address')}
 
-Project Description:
+🏗️ PROJECT DETAILS:
+───────────────────────────────────────
 {data.get('description')}
 
-Additional Notes / Visit Observations:
-{data.get('observations', '')}
-"""
+📝 ADDITIONAL NOTES / VISIT OBSERVATIONS:
+───────────────────────────────────────
+{data.get('observations', 'None provided')}
+
+═══════════════════════════════════════════════════════════════
+📞 FOLLOW-UP ACTIONS:
+   • Reply to client within 24 hours
+   • Schedule site visit if needed
+   • Prepare detailed quote
+
+💡 REMINDER: Client expects response within 24 hours
+   Contact info: {data.get('phone')} | {data.get('email')}
+═══════════════════════════════════════════════════════════════
+    """
     msg.set_content(body)
 
     try:
@@ -69,6 +86,5 @@ Additional Notes / Visit Observations:
         # Dica: ver o log de erro no Render se algo falhar
         return jsonify({"success": False, "error": str(e)}), 500
 
-@app.get("/health")
-def health():
-    return {"status": "ok"}
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000, debug=True)

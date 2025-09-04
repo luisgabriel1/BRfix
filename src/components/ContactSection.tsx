@@ -4,12 +4,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { useToast } from "@/hooks/use-toast";
 import { Phone, Mail, MapPin, Clock, Upload, X } from "lucide-react";
+import { useEmailService, type ContactFormData } from "@/hooks/useEmailService";
 
 const ContactSection = () => {
-  const { toast } = useToast();
-  const [formData, setFormData] = useState({
+  const { sendEmail, isLoading } = useEmailService();
+  const [formData, setFormData] = useState<ContactFormData>({
     name: "",
     email: "",
     address: "",
@@ -39,32 +39,12 @@ const ContactSection = () => {
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  
-  try {
-    const res = await fetch("http://localhost:3000/send-email", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        name: formData.name,
-        email: formData.email,
-        phone: formData.phone,
-        address: formData.address,
-        description: formData.description,
-        observations: formData.observations,
-      }),
-    });
-
-    const result = await res.json();
-
-    if (result.success) {
-      toast({
-        title: "Quote Request Submitted!",
-        description: "We'll contact you within 24 hours to discuss your project.",
-        duration: 5000,
-      });
-
-      // limpa os campos
+    e.preventDefault();
+    
+    const success = await sendEmail(formData);
+    
+    if (success) {
+      // Limpa os campos após envio bem-sucedido
       setFormData({
         name: "",
         email: "",
@@ -74,22 +54,8 @@ const ContactSection = () => {
         observations: "",
       });
       setFiles([]);
-    } else {
-      toast({
-        title: "Error",
-        description: result.error || "Failed to send message.",
-        variant: "destructive",
-      });
     }
-  } catch (error) {
-    console.error(error);
-    toast({
-      title: "Error",
-      description: "An unexpected error occurred.",
-      variant: "destructive",
-    });
-  }
-};
+  };
 
 
 
@@ -311,8 +277,8 @@ const ContactSection = () => {
                     </div>
                   </div>
 
-                  <Button type="submit" variant="hero" size="lg" className="w-full">
-                    Submit Quote Request
+                  <Button type="submit" variant="hero" size="lg" className="w-full" disabled={isLoading}>
+                    {isLoading ? "Sending..." : "Submit Quote Request"}
                   </Button>
 
                   <p className="text-sm text-muted-foreground text-center">
