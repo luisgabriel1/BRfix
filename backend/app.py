@@ -14,7 +14,7 @@ def send_email():
 
     sender_email = "contact@davensolutions.com"   # remetente (sua conta de envio)
     receiver_email = "contact@davensolutions.com" # destinatário (você mesmo)
-    password = "@@Alan0104@@"
+    password = "iQ6fsWWDbBLE"
 
     # título do email
     subject = f"New Quote Request from {data['name']}"
@@ -44,8 +44,8 @@ def send_email():
     msg.attach(MIMEText(body, "plain"))
 
     try:
-        # se for Gmail
-        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
+        # se for Zoho
+        with smtplib.SMTP_SSL("smtp.zoho.com", 465) as server:
             server.login(sender_email, password)
             server.sendmail(sender_email, receiver_email, msg.as_string())
 
