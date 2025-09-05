@@ -1,297 +1,146 @@
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Phone, Mail, MapPin, Clock, Upload, X } from "lucide-react";
-import { useEmailService, type ContactFormData } from "@/hooks/useEmailService";
+import React, { useState } from "react";
 
-const ContactSection = () => {
-  const { sendEmail, isLoading } = useEmailService();
-  const [formData, setFormData] = useState<ContactFormData>({
-    name: "",
-    email: "",
-    address: "",
-    phone: "",
-    description: "",
-    observations: ""
-  });
-  const [files, setFiles] = useState<File[]>([]);
+// URL do seu backend (defina VITE_API_URL no .env do frontend)
+const API_URL = (import.meta.env.VITE_API_URL as string) ?? "http://localhost:3001";
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
+type FileWithId = { id: string; file: File };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      const newFiles = Array.from(e.target.files);
-      setFiles(prev => [...prev, ...newFiles]);
-    }
-  };
+export default function ContactSection() {
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [message, setMessage] = useState("");
+  const [files, setFiles] = useState<FileWithId[]>([]);
+  const [loading, setLoading] = useState(false);
 
-  const removeFile = (index: number) => {
-    setFiles(prev => prev.filter((_, i) => i !== index));
-  };
+  function makeId() {
+    // id simples para chaveamento em listas
+    return `${Date.now().toString(36)}-${Math.floor(Math.random() * 1e6).toString(36)}`;
+  }
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  function handleFilesChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const fileList = e.target.files;
+    if (!fileList) return;
+    const newFiles = Array.from(fileList).map((f) => ({ id: makeId(), file: f }));
+    setFiles((prev) => [...prev, ...newFiles]);
+    // limpa o input para permitir re-upload do mesmo arquivo se desejado
+    e.currentTarget.value = "";
+  }
+
+  function removeFile(id: string) {
+    setFiles((prev) => prev.filter((f) => f.id !== id));
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    
-    const success = await sendEmail(formData);
-    
-    if (success) {
-      // Limpa os campos após envio bem-sucedido
-      setFormData({
-        name: "",
-        email: "",
-        address: "",
-        phone: "",
-        description: "",
-        observations: "",
-      });
+    setLoading(true);
+
+    try {
+      // Se não houver arquivos, enviamos JSON simples
+      if (files.length === 0) {
+        const res = await fetch(`${API_URL}/send-form`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name, email, message }),
+        });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error || "Erro desconhecido");
+      } else {
+        // Se houver arquivos, enviamos multipart/form-data
+        const formData = new FormData();
+        formData.append("name", name);
+        formData.append("email", email);
+        formData.append("message", message);
+        files.forEach((f) => formData.append("files", f.file));
+
+        const res = await fetch(`${API_URL}/send-form`, {
+          method: "POST",
+          body: formData, // NÃO setar Content-Type aqui — o browser define o boundary
+        });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error || "Erro desconhecido");
+      }
+
+      alert("Formulário enviado com sucesso!");
+      setName("");
+      setEmail("");
+      setMessage("");
       setFiles([]);
+    } catch (err) {
+      console.error(err);
+      alert("Erro ao enviar: " + (err instanceof Error ? err.message : String(err)));
+    } finally {
+      setLoading(false);
     }
-  };
-
-
+  }
 
   return (
-    <section id="contact" className="py-20 bg-muted/30">
-      <div className="container mx-auto px-4">
-        <div className="text-center mb-16">
-          <h2 className="text-4xl font-bold mb-4 text-foreground">Get Your Free Quote</h2>
-          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            Ready to start your home improvement project? Fill out the form below and we'll get back to you with a detailed quote.
-          </p>
+    <section className="max-w-xl mx-auto p-6">
+      <h2 className="text-2xl font-semibold mb-4">Contato</h2>
+
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium mb-1">Nome</label>
+          <input
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            required
+            className="w-full rounded-md border px-3 py-2"
+            placeholder="Seu nome"
+          />
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
-          {/* Contact Information */}
-          <div className="lg:col-span-1">
-            <Card className="shadow-card">
-              <CardHeader>
-                <CardTitle className="text-2xl font-bold text-card-foreground">Contact Information</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="flex items-start space-x-4">
-                  <div className="w-10 h-10 bg-gradient-hero rounded-full flex items-center justify-center flex-shrink-0">
-                    <Phone className="w-5 h-5 text-primary-foreground" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-card-foreground">Phone</h3>
-                    <p className="text-muted-foreground">+1 407-394-0171</p>
-                    <p className="text-sm text-muted-foreground">Available 24/7 for emergencies</p>
-                  </div>
-                </div>
-
-                <div className="flex items-start space-x-4">
-                  <div className="w-10 h-10 bg-gradient-hero rounded-full flex items-center justify-center flex-shrink-0">
-                    <Mail className="w-5 h-5 text-primary-foreground" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-card-foreground">Email</h3>
-                    <p className="text-muted-foreground">contact@davensolutions.com</p>
-                    <p className="text-sm text-muted-foreground">We respond within 24 hours</p>
-                  </div>
-                </div>
-
-                <div className="flex items-start space-x-4">
-                  <div className="w-10 h-10 bg-gradient-hero rounded-full flex items-center justify-center flex-shrink-0">
-                    <MapPin className="w-5 h-5 text-primary-foreground" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-card-foreground">Zip Code</h3>
-                    <p className="text-muted-foreground">33896</p>
-                    <p className="text-sm text-muted-foreground">Free estimates within service area</p>
-                  </div>
-                </div>
-
-                <div className="flex items-start space-x-4">
-                  <div className="w-10 h-10 bg-gradient-hero rounded-full flex items-center justify-center flex-shrink-0">
-                    <Clock className="w-5 h-5 text-primary-foreground" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-card-foreground">Business Hours</h3>
-                    <p className="text-muted-foreground">8:00am - 8:00pm</p>
-                    <p className="text-muted-foreground">Monday - Saturday</p>
-                    <div className="mt-2 p-2 bg-muted rounded">
-                      <p className="text-xs font-medium">24/7 Support Available:</p>
-                      <p className="text-xs text-muted-foreground">Email • SMS • WhatsApp</p>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Quote Request Form */}
-          <div className="lg:col-span-2">
-            <Card className="shadow-card">
-              <CardHeader>
-                <CardTitle className="text-2xl font-bold text-card-foreground">Request Your Quote</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <form onSubmit={handleSubmit} className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                      <Label htmlFor="name" className="text-sm font-medium text-card-foreground">
-                        Full Name *
-                      </Label>
-                      <Input
-                        id="name"
-                        name="name"
-                        value={formData.name}
-                        onChange={handleInputChange}
-                        required
-                        className="mt-1"
-                        placeholder="Enter your full name"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="email" className="text-sm font-medium text-card-foreground">
-                        Email Address *
-                      </Label>
-                      <Input
-                        id="email"
-                        name="email"
-                        type="email"
-                        value={formData.email}
-                        onChange={handleInputChange}
-                        required
-                        className="mt-1"
-                        placeholder="your.email@example.com"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <Label htmlFor="phone" className="text-sm font-medium text-card-foreground">
-                      Phone Number *
-                    </Label>
-                    <Input
-                      id="phone"
-                      name="phone"
-                      type="tel"
-                      value={formData.phone}
-                      onChange={handleInputChange}
-                      required
-                      className="mt-1"
-                      placeholder="ex: +1 000-000-0000"
-                    />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="address" className="text-sm font-medium text-card-foreground">
-                      Zip Code *
-                    </Label>
-                    <Input
-                      id="address"
-                      name="address"
-                      value={formData.address}
-                      onChange={handleInputChange}
-                      required
-                      className="mt-1"
-                      placeholder="ex: 00000"
-                    />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="description" className="text-sm font-medium text-card-foreground">
-                      Project Description *
-                    </Label>
-                    <Textarea
-                      id="description"
-                      name="description"
-                      value={formData.description}
-                      onChange={handleInputChange}
-                      required
-                      className="mt-1 min-h-[120px]"
-                      placeholder="Please describe what you need done in detail..."
-                    />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="observations" className="text-sm font-medium text-card-foreground">
-                      Additional Notes / Visit Observations
-                    </Label>
-                    <Textarea
-                      id="observations"
-                      name="observations"
-                      value={formData.observations}
-                      onChange={handleInputChange}
-                      className="mt-1"
-                      placeholder="Any additional information, special requirements, or notes about the visit..."
-                    />
-                  </div>
-
-                  <div>
-                    <Label className="text-sm font-medium text-card-foreground">
-                      Upload Images/Videos
-                    </Label>
-                    <div className="mt-2">
-                      <div className="border-2 border-dashed border-border rounded-lg p-6 hover:border-primary transition-colors">
-                        <input
-                          type="file"
-                          multiple
-                          accept="image/*,video/*"
-                          onChange={handleFileUpload}
-                          className="hidden"
-                          id="file-upload"
-                        />
-                        <label
-                          htmlFor="file-upload"
-                          className="cursor-pointer flex flex-col items-center justify-center space-y-2"
-                        >
-                          <Upload className="w-8 h-8 text-muted-foreground" />
-                          <span className="text-sm text-muted-foreground text-center">
-                            Click to upload images or videos of your project area
-                          </span>
-                          <span className="text-xs text-muted-foreground">
-                            Supports: JPG, PNG, MP4, MOV (Max 10MB each)
-                          </span>
-                        </label>
-                      </div>
-
-                      {files.length > 0 && (
-                        <div className="mt-4 space-y-2">
-                          <p className="text-sm font-medium text-card-foreground">Uploaded Files:</p>
-                          {files.map((file, index) => (
-                            <div key={index} className="flex items-center justify-between bg-muted rounded-lg p-3">
-                              <span className="text-sm text-muted-foreground truncate">{file.name}</span>
-                              <Button
-                                type="button"
-                                variant="secondary"
-                                size="sm"
-                                onClick={() => removeFile(index)}
-                              >
-                                <X className="w-4 h-4" />
-                              </Button>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  <Button type="submit" variant="hero" size="lg" className="w-full" disabled={isLoading}>
-                    {isLoading ? "Sending..." : "Submit Quote Request"}
-                  </Button>
-
-                  <p className="text-sm text-muted-foreground text-center">
-                    By submitting this form, you agree to be contacted by BRfix regarding your project.
-                  </p>
-                </form>
-              </CardContent>
-            </Card>
-          </div>
+        <div>
+          <label className="block text-sm font-medium mb-1">Email</label>
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            className="w-full rounded-md border px-3 py-2"
+            placeholder="seu@exemplo.com"
+          />
         </div>
-      </div>
+
+        <div>
+          <label className="block text-sm font-medium mb-1">Mensagem</label>
+          <textarea
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            rows={5}
+            className="w-full rounded-md border px-3 py-2"
+            placeholder="Escreva sua mensagem"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium mb-1">Anexos (opcional)</label>
+          <input type="file" multiple onChange={handleFilesChange} className="block" />
+
+          {files.length > 0 && (
+            <ul className="mt-2 space-y-2">
+              {files.map((f) => (
+                <li key={f.id} className="flex items-center justify-between border rounded p-2">
+                  <div className="truncate">{f.file.name} <span className="text-xs text-gray-500">({Math.round(f.file.size/1024)} KB)</span></div>
+                  <button type="button" onClick={() => removeFile(f.id)} className="ml-3 px-2 py-1 rounded bg-red-50 text-red-700">
+                    ×
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        <div>
+          <button
+            type="submit"
+            disabled={loading}
+            className="inline-flex items-center justify-center rounded bg-black text-white px-4 py-2 disabled:opacity-60"
+          >
+            {loading ? "Enviando..." : "Enviar"}
+          </button>
+        </div>
+      </form>
     </section>
   );
-};
-
-export default ContactSection;
+}
