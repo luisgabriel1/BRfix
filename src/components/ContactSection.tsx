@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -6,57 +5,81 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Phone, Mail, MapPin, Clock, Upload, X } from "lucide-react";
 import { useEmailService, type ContactFormData } from "@/hooks/useEmailService";
+import React, { useState } from "react";
 
-const ContactSection = () => {
-  const { sendEmail, isLoading } = useEmailService();
-  const [formData, setFormData] = useState<ContactFormData>({
+export default function ContactSection() {
+  const [formData, setFormData] = useState({
     name: "",
     email: "",
-    address: "",
     phone: "",
+    address: "",
     description: "",
-    observations: ""
+    observations: "",
   });
   const [files, setFiles] = useState<File[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [status, setStatus] = useState<string | null>(null);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
-      const newFiles = Array.from(e.target.files);
-      setFiles(prev => [...prev, ...newFiles]);
+      setFiles(Array.from(e.target.files));
     }
   };
 
   const removeFile = (index: number) => {
-    setFiles(prev => prev.filter((_, i) => i !== index));
+    setFiles((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    
-    const success = await sendEmail(formData);
-    
-    if (success) {
-      // Limpa os campos após envio bem-sucedido
-      setFormData({
-        name: "",
-        email: "",
-        address: "",
-        phone: "",
-        description: "",
-        observations: "",
+    setIsLoading(true);
+    setStatus(null);
+
+    // Prepare data for sending
+    const data = {
+      ...formData,
+      // You may want to handle files here if your backend supports it
+    };
+
+    try {
+      const response = await fetch("http://localhost:5000/send-email", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
       });
-      setFiles([]);
+
+      const result = await response.json();
+
+      if (result.success) {
+        setStatus("✅ Mensagem enviada com sucesso!");
+        setFormData({
+          name: "",
+          email: "",
+          phone: "",
+          address: "",
+          description: "",
+          observations: "",
+        });
+        setFiles([]);
+      } else {
+        setStatus("❌ Erro: " + (result.error || "Falha ao enviar."));
+      }
+    } catch (error) {
+      setStatus("❌ Erro de conexão com o servidor.");
+    } finally {
+      setIsLoading(false);
     }
   };
-
 
 
   return (
@@ -293,5 +316,3 @@ const ContactSection = () => {
     </section>
   );
 };
-
-export default ContactSection;
