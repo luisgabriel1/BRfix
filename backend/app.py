@@ -4,6 +4,7 @@ from email.message import EmailMessage
 from dotenv import load_dotenv
 import smtplib
 import os
+import re
 
 # Carrega variáveis do .env (apenas ambiente local)
 load_dotenv()
@@ -11,20 +12,15 @@ load_dotenv()
 # Configurações do Zoho Email
 SMTP_HOST = "smtp.zoho.com"
 SMTP_PORT = 465  # SSL
-SMTP_USER = "contact@davensolutions.com"
-SMTP_PASS = "iQ6fsWWDbBLE"  # App Password Zoho
-TO_EMAIL = "contact@davensolutions.com"  # Seu email para receber as mensagens
+SMTP_USER = os.getenv("ZOHO_EMAIL", "contact@davensolutions.com")
+SMTP_PASS = os.getenv("ZOHO_PASS", "iQ6fsWWDbBLE")
+TO_EMAIL = os.getenv("RECEIVER_EMAIL", "contact@davensolutions.com")
 
 app = Flask(__name__)
-
-# Em dev pode deixar aberto; em produção você pode restringir p/ seu domínio da Vercel
-CORS(app)  
-# Exemplo mais restrito:
-# CORS(app, resources={r"/*": {"origins": ["http://localhost:3000", "https://SEU-DOMINIO.vercel.app"]}})
+CORS(app)
 
 @app.route("/send-email", methods=["POST", "OPTIONS"])
 def send_email():
-    # Pré-flight CORS
     if request.method == "OPTIONS":
         return ("", 204)
 
@@ -34,13 +30,18 @@ def send_email():
     if missing:
         return jsonify({"success": False, "error": f"Missing: {', '.join(missing)}"}), 400
 
-    # Monta o e-mail com formatação profissional
+    # Valida e-mail do cliente
+    email_cliente = data.get("email", "").strip()
+    email_regex = r"^[\w\.-]+@[\w\.-]+\.\w+$"
+    if not re.match(email_regex, email_cliente):
+        return jsonify({"success": False, "error": "Invalid client email"}), 400
+
+    # Monta o e-mail
     msg = EmailMessage()
     msg["Subject"] = f"🏠 New Quote Request — {data.get('name')}"
     msg["From"] = SMTP_USER
     msg["To"] = TO_EMAIL
-    if data.get("email"):
-        msg["Reply-To"] = data["email"]
+    msg["Reply-To"] = email_cliente  # usa o email do cliente
 
     body = f"""
 ═══════════════════════════════════════════════════════════════
@@ -75,7 +76,6 @@ def send_email():
     msg.set_content(body)
 
     try:
-        # SSL direto (porta 465)
         with smtplib.SMTP_SSL(SMTP_HOST, SMTP_PORT) as smtp:
             smtp.login(SMTP_USER, SMTP_PASS)
             smtp.send_message(msg)
@@ -83,7 +83,6 @@ def send_email():
         return jsonify({"success": True}), 200
 
     except Exception as e:
-        # Dica: ver o log de erro no Render se algo falhar
         return jsonify({"success": False, "error": str(e)}), 500
 
 if __name__ == "__main__":
