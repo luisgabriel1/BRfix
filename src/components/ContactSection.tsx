@@ -5,9 +5,13 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Phone, Mail, MapPin, Clock, Upload, X } from "lucide-react";
 import { useEmailService, type ContactFormData } from "@/hooks/useEmailService";
+
 import React, { useState } from "react";
 
 export default function ContactSection() {
+  const [loading, setLoading] = useState(false);
+  const [status, setStatus] = useState<string | null>(null);
+
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -16,9 +20,11 @@ export default function ContactSection() {
     description: "",
     observations: "",
   });
+
   const [files, setFiles] = useState<File[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [status, setStatus] = useState<string | null>(null);
+
+  const API_URL = import.meta.env.VITE_API_URL; // pega a URL do backend do .env
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -40,22 +46,19 @@ export default function ContactSection() {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setLoading(true);
     setIsLoading(true);
     setStatus(null);
 
-    // Prepare data for sending
-    const data = {
-      ...formData,
-      // You may want to handle files here if your backend supports it
-    };
-
+    // If you want to send files, you need to use FormData, otherwise keep as JSON
+    // Here, we keep the original JSON logic for simplicity
     try {
-      const response = await fetch("http://localhost:5000/send-email", {
+      const response = await fetch(API_URL, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(data),
+        body: JSON.stringify(formData),
       });
 
       const result = await response.json();
@@ -71,12 +74,14 @@ export default function ContactSection() {
           observations: "",
         });
         setFiles([]);
+        (e.target as HTMLFormElement).reset();
       } else {
         setStatus("❌ Erro: " + (result.error || "Falha ao enviar."));
       }
     } catch (error) {
       setStatus("❌ Erro de conexão com o servidor.");
     } finally {
+      setLoading(false);
       setIsLoading(false);
     }
   };
