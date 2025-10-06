@@ -18,41 +18,32 @@ export const useEmailService = () => {
     setIsLoading(true);
     
     try {
-      // Para desenvolvimento e produção
-      const apiUrl = window.location.hostname === 'localhost' 
-        ? 'http://localhost:5000/send-email'
-        : '/api/send-email'; // Ajustar conforme sua configuração de produção
+      const { supabase } = await import("@/integrations/supabase/client");
+      
+      const { error } = await supabase
+        .from("quote_requests")
+        .insert([{
+          name: formData.name,
+          email: formData.email,
+          phone: formData.phone,
+          address: formData.address,
+          description: formData.description,
+          observations: formData.observations,
+        }]);
 
-      const response = await fetch(apiUrl, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(formData),
-      });
+      if (error) throw error;
 
-      const result = await response.json();
-
-      if (result.success) {
-        toast({
-          title: "Quote Request Submitted!",
-          description: "We'll contact you within 24 hours to discuss your project.",
-          duration: 5000,
-        });
-        return true;
-      } else {
-        toast({
-          title: "Error",
-          description: result.error || "Failed to send message. Please try again.",
-          variant: "destructive",
-        });
-        return false;
-      }
-    } catch (error) {
-      console.error("Email send error:", error);
       toast({
-        title: "Connection Error",
-        description: "Unable to send message. Please check your connection and try again.",
+        title: "Quote Request Submitted!",
+        description: "We'll contact you within 24 hours to discuss your project.",
+        duration: 5000,
+      });
+      return true;
+    } catch (error) {
+      console.error("Quote submission error:", error);
+      toast({
+        title: "Error",
+        description: "Unable to send request. Please try again.",
         variant: "destructive",
       });
       return false;
