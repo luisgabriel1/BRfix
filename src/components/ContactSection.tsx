@@ -4,13 +4,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Phone, Mail, MapPin, Clock, Upload, X } from "lucide-react";
-import { useEmailService, type ContactFormData } from "@/hooks/useEmailService";
-
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 import React, { useState } from "react";
 
 export default function ContactSection() {
-  const [loading, setLoading] = useState(false);
-  const [status, setStatus] = useState<string | null>(null);
+  const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(false);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -22,9 +22,6 @@ export default function ContactSection() {
   });
 
   const [files, setFiles] = useState<File[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-
-  const API_URL = import.meta.env.VITE_API_URL; // pega a URL do backend do .env
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -46,42 +43,53 @@ export default function ContactSection() {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setLoading(true);
     setIsLoading(true);
-    setStatus(null);
 
-    // If you want to send files, you need to use FormData, otherwise keep as JSON
-    // Here, we keep the original JSON logic for simplicity
     try {
-      const response = await fetch(API_URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(formData),
+      const { error } = await supabase
+        .from("quote_requests")
+        .insert([
+          {
+            name: formData.name,
+            email: formData.email,
+            phone: formData.phone,
+            address: formData.address,
+            description: formData.description,
+            observations: formData.observations || null,
+          },
+        ]);
+
+      if (error) {
+        toast({
+          title: "Error",
+          description: "Failed to submit quote request. Please try again.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      toast({
+        title: "Success!",
+        description: "Your quote request has been submitted successfully.",
       });
 
-      const result = await response.json();
-
-      if (result.success) {
-        setStatus("✅ Mensagem enviada com sucesso!");
-        setFormData({
-          name: "",
-          email: "",
-          phone: "",
-          address: "",
-          description: "",
-          observations: "",
-        });
-        setFiles([]);
-        (e.target as HTMLFormElement).reset();
-      } else {
-        setStatus("❌ Erro: " + (result.error || "Falha ao enviar."));
-      }
+      setFormData({
+        name: "",
+        email: "",
+        phone: "",
+        address: "",
+        description: "",
+        observations: "",
+      });
+      setFiles([]);
+      (e.target as HTMLFormElement).reset();
     } catch (error) {
-      setStatus("❌ Erro de conexão com o servidor.");
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive",
+      });
     } finally {
-      setLoading(false);
       setIsLoading(false);
     }
   };
