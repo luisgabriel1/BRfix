@@ -9,18 +9,19 @@ export const useAuth = () => {
   const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
-    console.log("useAuth - Starting initialization");
+    let mounted = true;
     
-    // Set up auth state listener FIRST
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log("useAuth - Auth state changed:", event, "session:", !!session);
+    // Check initial session
+    const initAuth = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (!mounted) return;
+        
         setSession(session);
         setUser(session?.user ?? null);
         
-        // Check admin role after setting session
         if (session?.user) {
-          console.log("useAuth - Checking admin role for user:", session.user.id);
           const { data } = await supabase
             .from("user_roles")
             .select("role")
@@ -28,41 +29,53 @@ export const useAuth = () => {
             .eq("role", "admin")
             .maybeSingle();
           
-          console.log("useAuth - Admin check result:", !!data);
-          setIsAdmin(!!data);
-        } else {
-          setIsAdmin(false);
+          if (mounted) {
+            setIsAdmin(!!data);
+          }
         }
-        setLoading(false);
-        console.log("useAuth - Finished processing auth change");
+      } catch (error) {
+        console.error("Auth error:", error);
+      } finally {
+        if (mounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    initAuth();
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (_event, session) => {
+        if (!mounted) return;
+        
+        setSession(session);
+        setUser(session?.user ?? null);
+        
+        if (session?.user) {
+          const { data } = await supabase
+            .from("user_roles")
+            .select("role")
+            .eq("user_id", session.user.id)
+            .eq("role", "admin")
+            .maybeSingle();
+          
+          if (mounted) {
+            setIsAdmin(!!data);
+          }
+        } else {
+          if (mounted) {
+            setIsAdmin(false);
+          }
+        }
       }
     );
 
-    // THEN check for existing session
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      console.log("useAuth - Initial session check:", !!session);
-      setSession(session);
-      setUser(session?.user ?? null);
-      
-      if (session?.user) {
-        console.log("useAuth - Checking admin role for existing session:", session.user.id);
-        const { data } = await supabase
-          .from("user_roles")
-          .select("role")
-          .eq("user_id", session.user.id)
-          .eq("role", "admin")
-          .maybeSingle();
-        
-        console.log("useAuth - Admin check result (initial):", !!data);
-        setIsAdmin(!!data);
-      }
-      setLoading(false);
-      console.log("useAuth - Finished initial session check");
-    });
-
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
-
 
   const signOut = async () => {
     await supabase.auth.signOut();
