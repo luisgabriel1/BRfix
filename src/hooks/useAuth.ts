@@ -11,15 +11,20 @@ export const useAuth = () => {
   useEffect(() => {
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
+      async (event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
         
         // Check admin role after setting session
         if (session?.user) {
-          setTimeout(() => {
-            checkAdminRole(session.user.id);
-          }, 0);
+          const { data } = await supabase
+            .from("user_roles")
+            .select("role")
+            .eq("user_id", session.user.id)
+            .eq("role", "admin")
+            .maybeSingle();
+          
+          setIsAdmin(!!data);
         } else {
           setIsAdmin(false);
         }
@@ -28,14 +33,19 @@ export const useAuth = () => {
     );
 
     // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
       
       if (session?.user) {
-        setTimeout(() => {
-          checkAdminRole(session.user.id);
-        }, 0);
+        const { data } = await supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", session.user.id)
+          .eq("role", "admin")
+          .maybeSingle();
+        
+        setIsAdmin(!!data);
       }
       setLoading(false);
     });
@@ -43,16 +53,6 @@ export const useAuth = () => {
     return () => subscription.unsubscribe();
   }, []);
 
-  const checkAdminRole = async (userId: string) => {
-    const { data } = await supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", userId)
-      .eq("role", "admin")
-      .maybeSingle();
-
-    setIsAdmin(!!data);
-  };
 
   const signOut = async () => {
     await supabase.auth.signOut();
