@@ -17,12 +17,27 @@ export default function Auth() {
   const [password, setPassword] = useState("");
 
   useEffect(() => {
-    // Check if user is already logged in
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        navigate("/");
+    // Check if user is already logged in and redirect accordingly
+    const checkSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        // Check if user is admin
+        const { data: roleData } = await supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", session.user.id)
+          .eq("role", "admin")
+          .maybeSingle();
+        
+        if (roleData) {
+          navigate("/admin");
+        } else {
+          navigate("/");
+        }
       }
-    });
+    };
+    
+    checkSession();
   }, [navigate]);
 
   const handleSignUp = async (e: React.FormEvent) => {
@@ -58,7 +73,7 @@ export default function Auth() {
     e.preventDefault();
     setLoading(true);
 
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
@@ -69,14 +84,29 @@ export default function Auth() {
         description: error.message,
         variant: "destructive",
       });
+      setLoading(false);
     } else {
+      // Check if user is admin
+      const { data: roleData } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", data.user.id)
+        .eq("role", "admin")
+        .maybeSingle();
+      
       toast({
         title: "Welcome back!",
         description: "You have successfully signed in.",
       });
-      navigate("/");
+      
+      // Redirect based on role
+      if (roleData) {
+        navigate("/admin");
+      } else {
+        navigate("/");
+      }
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   return (
