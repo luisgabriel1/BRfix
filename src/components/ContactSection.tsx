@@ -46,6 +46,23 @@ export default function ContactSection() {
     setIsLoading(true);
 
     try {
+      let fileUrls: string[] = [];
+      
+      // Upload files to storage if any
+      if (files.length > 0) {
+        const uploadPromises = files.map(async (file) => {
+          const fileName = `${Date.now()}-${file.name}`;
+          const { data, error } = await supabase.storage
+            .from('quote-attachments')
+            .upload(fileName, file);
+          
+          if (error) throw error;
+          return data.path;
+        });
+        
+        fileUrls = await Promise.all(uploadPromises);
+      }
+
       const { error } = await supabase
         .from("quote_requests")
         .insert([
@@ -56,6 +73,7 @@ export default function ContactSection() {
             address: formData.address,
             description: formData.description,
             observations: formData.observations || null,
+            file_urls: fileUrls.length > 0 ? fileUrls : null,
           },
         ]);
 

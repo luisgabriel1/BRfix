@@ -24,6 +24,7 @@ interface QuoteRequest {
   service_type: string | null;
   service_date: string | null;
   service_address: string | null;
+  file_urls: string[] | null;
   created_at: string;
 }
 
@@ -56,6 +57,7 @@ export const QuoteRequestsList = () => {
     const { data, error } = await supabase
       .from("quote_requests")
       .select("*")
+      .eq("status", "pending")
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -216,6 +218,25 @@ export const QuoteRequestsList = () => {
                               <div>
                                 <Label className="font-semibold">Observations</Label>
                                 <p className="mt-1 text-sm">{quote.observations}</p>
+                              </div>
+                            )}
+                            {quote.file_urls && quote.file_urls.length > 0 && (
+                              <div>
+                                <Label className="font-semibold">Arquivos Enviados</Label>
+                                <div className="mt-2 grid grid-cols-2 gap-2">
+                                  {quote.file_urls.map((url, idx) => (
+                                    <a
+                                      key={idx}
+                                      href={`${supabase.storage.from('quote-attachments').getPublicUrl(url).data.publicUrl}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="text-sm text-primary hover:underline flex items-center gap-1"
+                                    >
+                                      <Eye className="w-3 h-3" />
+                                      Arquivo {idx + 1}
+                                    </a>
+                                  ))}
+                                </div>
                               </div>
                             )}
                             <div className="grid grid-cols-2 gap-4">

@@ -11,7 +11,14 @@ export const useAuth = () => {
   useEffect(() => {
     let mounted = true;
     
-    // Check initial session
+    const checkAdminRole = async (userId: string) => {
+      const { data } = await supabase.rpc('has_role', { 
+        _user_id: userId, 
+        _role: 'admin' 
+      });
+      return data;
+    };
+
     const initAuth = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
@@ -22,29 +29,19 @@ export const useAuth = () => {
         setUser(session?.user ?? null);
         
         if (session?.user) {
-          const { data } = await supabase
-            .from("user_roles")
-            .select("role")
-            .eq("user_id", session.user.id)
-            .eq("role", "admin")
-            .maybeSingle();
-          
-          if (mounted) {
-            setIsAdmin(!!data);
-          }
+          const isAdminUser = await checkAdminRole(session.user.id);
+          if (mounted) setIsAdmin(isAdminUser);
         }
+        
+        if (mounted) setLoading(false);
       } catch (error) {
         console.error("Auth error:", error);
-      } finally {
-        if (mounted) {
-          setLoading(false);
-        }
+        if (mounted) setLoading(false);
       }
     };
 
     initAuth();
 
-    // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
         if (!mounted) return;
@@ -53,20 +50,10 @@ export const useAuth = () => {
         setUser(session?.user ?? null);
         
         if (session?.user) {
-          const { data } = await supabase
-            .from("user_roles")
-            .select("role")
-            .eq("user_id", session.user.id)
-            .eq("role", "admin")
-            .maybeSingle();
-          
-          if (mounted) {
-            setIsAdmin(!!data);
-          }
+          const isAdminUser = await checkAdminRole(session.user.id);
+          if (mounted) setIsAdmin(isAdminUser);
         } else {
-          if (mounted) {
-            setIsAdmin(false);
-          }
+          if (mounted) setIsAdmin(false);
         }
       }
     );

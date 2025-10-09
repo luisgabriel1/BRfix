@@ -15,9 +15,7 @@ export default function AdminDashboard() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    console.log("AdminDashboard - loading:", loading, "user:", !!user, "isAdmin:", isAdmin);
     if (!loading && (!user || !isAdmin)) {
-      console.log("Redirecting to /auth");
       navigate("/auth");
     }
   }, [user, isAdmin, loading, navigate]);
@@ -27,15 +25,10 @@ export default function AdminDashboard() {
     navigate("/");
   };
 
-  console.log("AdminDashboard render - loading:", loading, "user:", !!user, "isAdmin:", isAdmin);
-
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-4 text-muted-foreground">Carregando...</p>
-        </div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
       </div>
     );
   }
