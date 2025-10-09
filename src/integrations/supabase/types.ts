@@ -26,6 +26,9 @@ export type Database = {
           name: string
           observations: string | null
           phone: string
+          service_address: string | null
+          service_date: string | null
+          service_type: string | null
           service_value: number | null
           status: string | null
           updated_at: string | null
@@ -41,6 +44,9 @@ export type Database = {
           name: string
           observations?: string | null
           phone: string
+          service_address?: string | null
+          service_date?: string | null
+          service_type?: string | null
           service_value?: number | null
           status?: string | null
           updated_at?: string | null
@@ -56,6 +62,9 @@ export type Database = {
           name?: string
           observations?: string | null
           phone?: string
+          service_address?: string | null
+          service_date?: string | null
+          service_type?: string | null
           service_value?: number | null
           status?: string | null
           updated_at?: string | null

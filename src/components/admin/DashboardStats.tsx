@@ -1,40 +1,29 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, DollarSign, CheckCircle, Clock } from "lucide-react";
+import { Users, DollarSign, CheckCircle, TrendingUp } from "lucide-react";
 
 interface Stats {
-  newClients: number;
-  totalClients: number;
-  closedDeals: number;
+  totalQuotes: number;
+  closedServices: number;
+  conversionRate: number;
   totalValue: number;
 }
 
 export const DashboardStats = () => {
   const [stats, setStats] = useState<Stats>({
-    newClients: 0,
-    totalClients: 0,
-    closedDeals: 0,
+    totalQuotes: 0,
+    closedServices: 0,
+    conversionRate: 0,
     totalValue: 0,
   });
 
   useEffect(() => {
     fetchStats();
 
-    // Subscribe to realtime updates
     const channel = supabase
-      .channel('quote_requests_changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'quote_requests'
-        },
-        () => {
-          fetchStats();
-        }
-      )
+      .channel('dashboard_stats')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'quote_requests' }, fetchStats)
       .subscribe();
 
     return () => {
@@ -43,56 +32,50 @@ export const DashboardStats = () => {
   }, []);
 
   const fetchStats = async () => {
-    // Get all quotes
     const { data: allQuotes } = await supabase
       .from("quote_requests")
       .select("*");
 
     if (!allQuotes) return;
 
-    // Get quotes from last 7 days for "new clients"
-    const sevenDaysAgo = new Date();
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-    
-    const newClients = allQuotes.filter(
-      (q) => new Date(q.created_at) >= sevenDaysAgo
-    ).length;
-
-    const closedQuotes = allQuotes.filter((q) => q.status === "closed");
-    const totalValue = closedQuotes.reduce(
+    const closedServices = allQuotes.filter((q) => q.status === "closed");
+    const totalValue = closedServices.reduce(
       (sum, q) => sum + (Number(q.service_value) || 0),
       0
     );
+    const conversionRate = allQuotes.length > 0 
+      ? (closedServices.length / allQuotes.length) * 100 
+      : 0;
 
     setStats({
-      newClients,
-      totalClients: allQuotes.length,
-      closedDeals: closedQuotes.length,
+      totalQuotes: allQuotes.length,
+      closedServices: closedServices.length,
+      conversionRate: Math.round(conversionRate),
       totalValue,
     });
   };
 
   const statCards = [
     {
-      title: "New Clients (7 days)",
-      value: stats.newClients,
-      icon: Clock,
+      title: "Total de Orçamentos",
+      value: stats.totalQuotes,
+      icon: Users,
       color: "text-blue-500",
     },
     {
-      title: "Total Clients",
-      value: stats.totalClients,
-      icon: Users,
-      color: "text-purple-500",
-    },
-    {
-      title: "Closed Deals",
-      value: stats.closedDeals,
+      title: "Serviços Fechados",
+      value: stats.closedServices,
       icon: CheckCircle,
       color: "text-green-500",
     },
     {
-      title: "Total Value",
+      title: "Taxa de Conversão",
+      value: `${stats.conversionRate}%`,
+      icon: TrendingUp,
+      color: "text-purple-500",
+    },
+    {
+      title: "Valor Total",
       value: `$${stats.totalValue.toLocaleString("en-US", { minimumFractionDigits: 2 })}`,
       icon: DollarSign,
       color: "text-orange-500",

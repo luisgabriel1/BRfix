@@ -5,8 +5,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { LogOut, Users, DollarSign, CheckCircle, Clock } from "lucide-react";
+import { LogOut } from "lucide-react";
 import { QuoteRequestsList } from "@/components/admin/QuoteRequestsList";
+import { ClosedServicesList } from "@/components/admin/ClosedServicesList";
 import { DashboardStats } from "@/components/admin/DashboardStats";
 
 export default function AdminDashboard() {
@@ -62,7 +63,8 @@ export default function AdminDashboard() {
         <Tabs defaultValue="stats" className="space-y-6">
           <TabsList>
             <TabsTrigger value="stats">Dashboard</TabsTrigger>
-            <TabsTrigger value="quotes">Quote Requests</TabsTrigger>
+            <TabsTrigger value="quotes">Solicitações</TabsTrigger>
+            <TabsTrigger value="services">Serviços Fechados</TabsTrigger>
           </TabsList>
 
           <TabsContent value="stats">
@@ -72,13 +74,27 @@ export default function AdminDashboard() {
           <TabsContent value="quotes">
             <Card>
               <CardHeader>
-                <CardTitle>Quote Requests</CardTitle>
+                <CardTitle>Solicitações de Orçamento</CardTitle>
                 <CardDescription>
-                  Manage all customer quote requests in real-time
+                  Gerencie todas as solicitações em tempo real
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <QuoteRequestsList />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="services">
+            <Card>
+              <CardHeader>
+                <CardTitle>Serviços Fechados</CardTitle>
+                <CardDescription>
+                  Visualize todos os serviços concluídos
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ClosedServicesList />
               </CardContent>
             </Card>
           </TabsContent>

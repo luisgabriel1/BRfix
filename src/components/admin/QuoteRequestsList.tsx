@@ -3,26 +3,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { CheckCircle, Eye } from "lucide-react";
+import { CheckCircle, Eye, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 
 interface QuoteRequest {
@@ -35,34 +21,30 @@ interface QuoteRequest {
   observations: string | null;
   status: string;
   service_value: number | null;
+  service_type: string | null;
+  service_date: string | null;
+  service_address: string | null;
   created_at: string;
-  updated_at: string;
 }
 
 export const QuoteRequestsList = () => {
   const [quotes, setQuotes] = useState<QuoteRequest[]>([]);
   const [selectedQuote, setSelectedQuote] = useState<QuoteRequest | null>(null);
-  const [serviceValue, setServiceValue] = useState("");
-  const [dialogOpen, setDialogOpen] = useState(false);
+  const [closeDialogOpen, setCloseDialogOpen] = useState(false);
+  const [formData, setFormData] = useState({
+    serviceValue: "",
+    serviceType: "",
+    serviceDate: "",
+    serviceAddress: "",
+  });
   const { toast } = useToast();
 
   useEffect(() => {
     fetchQuotes();
 
-    // Subscribe to realtime updates
     const channel = supabase
-      .channel('quote_requests_list')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'quote_requests'
-        },
-        () => {
-          fetchQuotes();
-        }
-      )
+      .channel('quotes_realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'quote_requests' }, fetchQuotes)
       .subscribe();
 
     return () => {
@@ -89,10 +71,10 @@ export const QuoteRequestsList = () => {
   };
 
   const handleCloseQuote = async () => {
-    if (!selectedQuote || !serviceValue) {
+    if (!selectedQuote || !formData.serviceValue || !formData.serviceType || !formData.serviceDate) {
       toast({
-        title: "Error",
-        description: "Please enter a service value",
+        title: "Erro",
+        description: "Preencha todos os campos obrigatórios",
         variant: "destructive",
       });
       return;
@@ -102,7 +84,10 @@ export const QuoteRequestsList = () => {
       .from("quote_requests")
       .update({
         status: "closed",
-        service_value: parseFloat(serviceValue),
+        service_value: parseFloat(formData.serviceValue),
+        service_type: formData.serviceType,
+        service_date: formData.serviceDate,
+        service_address: formData.serviceAddress || selectedQuote.address,
         closed_at: new Date().toISOString(),
         closed_by: (await supabase.auth.getUser()).data.user?.id,
       })
@@ -110,21 +95,42 @@ export const QuoteRequestsList = () => {
 
     if (error) {
       toast({
-        title: "Error",
-        description: "Failed to close quote",
+        title: "Erro",
+        description: "Falha ao fechar orçamento",
         variant: "destructive",
       });
       return;
     }
 
     toast({
-      title: "Success",
-      description: "Quote closed successfully",
+      title: "Sucesso",
+      description: "Serviço fechado com sucesso",
     });
 
-    setDialogOpen(false);
-    setServiceValue("");
+    setCloseDialogOpen(false);
+    setFormData({ serviceValue: "", serviceType: "", serviceDate: "", serviceAddress: "" });
     setSelectedQuote(null);
+  };
+
+  const handleDeleteQuote = async (id: string) => {
+    const { error } = await supabase
+      .from("quote_requests")
+      .delete()
+      .eq("id", id);
+
+    if (error) {
+      toast({
+        title: "Erro",
+        description: "Falha ao excluir solicitação",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    toast({
+      title: "Sucesso",
+      description: "Solicitação excluída",
+    });
   };
 
   return (
@@ -237,33 +243,76 @@ export const QuoteRequestsList = () => {
                       </Dialog>
 
                       {quote.status === "pending" && (
-                        <Dialog open={dialogOpen && selectedQuote?.id === quote.id} onOpenChange={(open) => {
-                          setDialogOpen(open);
-                          if (open) setSelectedQuote(quote);
+                        <Dialog open={closeDialogOpen && selectedQuote?.id === quote.id} onOpenChange={(open) => {
+                          setCloseDialogOpen(open);
+                          if (open) {
+                            setSelectedQuote(quote);
+                            setFormData({
+                              serviceValue: "",
+                              serviceType: "",
+                              serviceDate: "",
+                              serviceAddress: quote.address,
+                            });
+                          }
                         }}>
                           <DialogTrigger asChild>
                             <Button variant="default" size="sm">
                               <CheckCircle className="w-4 h-4 mr-1" />
-                              Close
+                              Fechar
                             </Button>
                           </DialogTrigger>
-                          <DialogContent>
+                          <DialogContent className="max-w-2xl">
                             <DialogHeader>
-                              <DialogTitle>Close Quote</DialogTitle>
+                              <DialogTitle>Fechar Serviço</DialogTitle>
                               <DialogDescription>
-                                Enter the final service value for this quote
+                                Preencha os detalhes do serviço fechado
                               </DialogDescription>
                             </DialogHeader>
                             <div className="grid gap-4 py-4">
+                              <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                  <Label htmlFor="client">Cliente</Label>
+                                  <Input id="client" value={quote.name} disabled />
+                                </div>
+                                <div>
+                                  <Label htmlFor="value">Valor do Serviço ($) *</Label>
+                                  <Input
+                                    id="value"
+                                    type="number"
+                                    step="0.01"
+                                    placeholder="0.00"
+                                    value={formData.serviceValue}
+                                    onChange={(e) => setFormData({...formData, serviceValue: e.target.value})}
+                                  />
+                                </div>
+                              </div>
+                              <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                  <Label htmlFor="type">Tipo de Serviço *</Label>
+                                  <Input
+                                    id="type"
+                                    placeholder="Ex: Instalação elétrica"
+                                    value={formData.serviceType}
+                                    onChange={(e) => setFormData({...formData, serviceType: e.target.value})}
+                                  />
+                                </div>
+                                <div>
+                                  <Label htmlFor="date">Data do Serviço *</Label>
+                                  <Input
+                                    id="date"
+                                    type="datetime-local"
+                                    value={formData.serviceDate}
+                                    onChange={(e) => setFormData({...formData, serviceDate: e.target.value})}
+                                  />
+                                </div>
+                              </div>
                               <div>
-                                <Label htmlFor="value">Service Value ($)</Label>
-                                <Input
-                                  id="value"
-                                  type="number"
-                                  step="0.01"
-                                  placeholder="0.00"
-                                  value={serviceValue}
-                                  onChange={(e) => setServiceValue(e.target.value)}
+                                <Label htmlFor="address">Endereço do Serviço</Label>
+                                <Textarea
+                                  id="address"
+                                  placeholder="Endereço completo"
+                                  value={formData.serviceAddress}
+                                  onChange={(e) => setFormData({...formData, serviceAddress: e.target.value})}
                                 />
                               </div>
                             </div>
@@ -271,19 +320,30 @@ export const QuoteRequestsList = () => {
                               <Button
                                 variant="outline"
                                 onClick={() => {
-                                  setDialogOpen(false);
-                                  setServiceValue("");
+                                  setCloseDialogOpen(false);
+                                  setFormData({ serviceValue: "", serviceType: "", serviceDate: "", serviceAddress: "" });
                                 }}
                               >
-                                Cancel
+                                Cancelar
                               </Button>
                               <Button onClick={handleCloseQuote}>
-                                Close Quote
+                                Fechar Serviço
                               </Button>
                             </DialogFooter>
                           </DialogContent>
                         </Dialog>
                       )}
+                      <Button 
+                        variant="destructive" 
+                        size="sm"
+                        onClick={() => {
+                          if (confirm("Tem certeza que deseja excluir esta solicitação?")) {
+                            handleDeleteQuote(quote.id);
+                          }
+                        }}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
                     </div>
                   </TableCell>
                 </TableRow>
