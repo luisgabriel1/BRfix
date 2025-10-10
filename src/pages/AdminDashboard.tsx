@@ -9,6 +9,7 @@ import { LogOut } from "lucide-react";
 import { QuoteRequestsList } from "@/components/admin/QuoteRequestsList";
 import { ClosedServicesList } from "@/components/admin/ClosedServicesList";
 import { DashboardStats } from "@/components/admin/DashboardStats";
+import { ServiceTypeStats } from "@/components/admin/ServiceTypeStats";
 
 export default function AdminDashboard() {
   const { user, isAdmin, loading, signOut } = useAuth();
@@ -60,8 +61,9 @@ export default function AdminDashboard() {
             <TabsTrigger value="services">Serviços Fechados</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="stats">
+          <TabsContent value="stats" className="space-y-6">
             <DashboardStats />
+            <ServiceTypeStats />
           </TabsContent>
 
           <TabsContent value="quotes">

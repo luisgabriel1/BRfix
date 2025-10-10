@@ -5,6 +5,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Eye } from "lucide-react";
 import { format } from "date-fns";
 
@@ -23,6 +25,10 @@ interface ClosedService {
 
 export const ClosedServicesList = () => {
   const [services, setServices] = useState<ClosedService[]>([]);
+  const [filteredServices, setFilteredServices] = useState<ClosedService[]>([]);
+  const [filterType, setFilterType] = useState<string>("all");
+  const [filterDate, setFilterDate] = useState<string>("");
+  const [sortBy, setSortBy] = useState<string>("date");
 
   useEffect(() => {
     fetchClosedServices();
@@ -37,19 +43,86 @@ export const ClosedServicesList = () => {
     };
   }, []);
 
+  useEffect(() => {
+    applyFilters();
+  }, [services, filterType, filterDate, sortBy]);
+
   const fetchClosedServices = async () => {
     const { data } = await supabase
       .from("quote_requests")
       .select("*")
-      .eq("status", "closed")
-      .order("service_date", { ascending: false, nullsFirst: false })
-      .order("closed_at", { ascending: false });
+      .eq("status", "closed");
 
     setServices(data || []);
   };
 
+  const applyFilters = () => {
+    let filtered = [...services];
+
+    if (filterType !== "all") {
+      filtered = filtered.filter(s => s.service_type?.toLowerCase() === filterType.toLowerCase());
+    }
+
+    if (filterDate) {
+      filtered = filtered.filter(s => {
+        if (!s.service_date) return false;
+        const serviceDate = format(new Date(s.service_date), "yyyy-MM-dd");
+        return serviceDate === filterDate;
+      });
+    }
+
+    if (sortBy === "date") {
+      filtered.sort((a, b) => {
+        if (!a.service_date || !b.service_date) return 0;
+        return new Date(b.service_date).getTime() - new Date(a.service_date).getTime();
+      });
+    } else if (sortBy === "value") {
+      filtered.sort((a, b) => (b.service_value || 0) - (a.service_value || 0));
+    }
+
+    setFilteredServices(filtered);
+  };
+
+  const uniqueServiceTypes = Array.from(new Set(services.map(s => s.service_type).filter(Boolean)));
+
   return (
     <div className="space-y-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+        <div>
+          <Label>Filtrar por Tipo</Label>
+          <Select value={filterType} onValueChange={setFilterType}>
+            <SelectTrigger>
+              <SelectValue placeholder="Todos os tipos" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos os tipos</SelectItem>
+              {uniqueServiceTypes.map(type => (
+                <SelectItem key={type} value={type || ""}>{type}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <Label>Filtrar por Data</Label>
+          <Input 
+            type="date" 
+            value={filterDate} 
+            onChange={(e) => setFilterDate(e.target.value)}
+          />
+        </div>
+        <div>
+          <Label>Ordenar por</Label>
+          <Select value={sortBy} onValueChange={setSortBy}>
+            <SelectTrigger>
+              <SelectValue placeholder="Data recente" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="date">Data mais recente</SelectItem>
+              <SelectItem value="value">Maior valor</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
       <div className="rounded-md border">
         <Table>
           <TableHeader>
@@ -62,14 +135,14 @@ export const ClosedServicesList = () => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {services.length === 0 ? (
+            {filteredServices.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={5} className="text-center text-muted-foreground">
-                  Nenhum serviço fechado ainda
+                  Nenhum serviço encontrado
                 </TableCell>
               </TableRow>
             ) : (
-              services.map((service) => (
+              filteredServices.map((service) => (
                 <TableRow key={service.id}>
                   <TableCell className="font-medium">{service.name}</TableCell>
                   <TableCell>

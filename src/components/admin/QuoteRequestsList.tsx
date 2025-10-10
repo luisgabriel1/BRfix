@@ -36,6 +36,7 @@ export const QuoteRequestsList = () => {
     serviceValue: "",
     serviceType: "",
     serviceDate: "",
+    serviceTime: "",
     serviceAddress: "",
   });
   const { toast } = useToast();
@@ -73,7 +74,7 @@ export const QuoteRequestsList = () => {
   };
 
   const handleCloseQuote = async () => {
-    if (!selectedQuote || !formData.serviceValue || !formData.serviceType || !formData.serviceDate) {
+    if (!selectedQuote || !formData.serviceValue || !formData.serviceType || !formData.serviceDate || !formData.serviceTime) {
       toast({
         title: "Erro",
         description: "Preencha todos os campos obrigatórios",
@@ -82,13 +83,15 @@ export const QuoteRequestsList = () => {
       return;
     }
 
+    const serviceDatetime = `${formData.serviceDate}T${formData.serviceTime}:00`;
+
     const { error } = await supabase
       .from("quote_requests")
       .update({
         status: "closed",
         service_value: parseFloat(formData.serviceValue),
         service_type: formData.serviceType,
-        service_date: formData.serviceDate,
+        service_date: serviceDatetime,
         service_address: formData.serviceAddress || selectedQuote.address,
         closed_at: new Date().toISOString(),
         closed_by: (await supabase.auth.getUser()).data.user?.id,
@@ -110,7 +113,7 @@ export const QuoteRequestsList = () => {
     });
 
     setCloseDialogOpen(false);
-    setFormData({ serviceValue: "", serviceType: "", serviceDate: "", serviceAddress: "" });
+    setFormData({ serviceValue: "", serviceType: "", serviceDate: "", serviceTime: "", serviceAddress: "" });
     setSelectedQuote(null);
   };
 
@@ -272,6 +275,7 @@ export const QuoteRequestsList = () => {
                               serviceValue: "",
                               serviceType: "",
                               serviceDate: "",
+                              serviceTime: "",
                               serviceAddress: quote.address,
                             });
                           }
@@ -307,23 +311,32 @@ export const QuoteRequestsList = () => {
                                   />
                                 </div>
                               </div>
+                              <div>
+                                <Label htmlFor="type">Tipo de Serviço *</Label>
+                                <Input
+                                  id="type"
+                                  placeholder="Ex: Instalação elétrica"
+                                  value={formData.serviceType}
+                                  onChange={(e) => setFormData({...formData, serviceType: e.target.value})}
+                                />
+                              </div>
                               <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                  <Label htmlFor="type">Tipo de Serviço *</Label>
-                                  <Input
-                                    id="type"
-                                    placeholder="Ex: Instalação elétrica"
-                                    value={formData.serviceType}
-                                    onChange={(e) => setFormData({...formData, serviceType: e.target.value})}
-                                  />
-                                </div>
                                 <div>
                                   <Label htmlFor="date">Data do Serviço *</Label>
                                   <Input
                                     id="date"
-                                    type="datetime-local"
+                                    type="date"
                                     value={formData.serviceDate}
                                     onChange={(e) => setFormData({...formData, serviceDate: e.target.value})}
+                                  />
+                                </div>
+                                <div>
+                                  <Label htmlFor="time">Horário *</Label>
+                                  <Input
+                                    id="time"
+                                    type="time"
+                                    value={formData.serviceTime}
+                                    onChange={(e) => setFormData({...formData, serviceTime: e.target.value})}
                                   />
                                 </div>
                               </div>
@@ -342,7 +355,7 @@ export const QuoteRequestsList = () => {
                                 variant="outline"
                                 onClick={() => {
                                   setCloseDialogOpen(false);
-                                  setFormData({ serviceValue: "", serviceType: "", serviceDate: "", serviceAddress: "" });
+                                  setFormData({ serviceValue: "", serviceType: "", serviceDate: "", serviceTime: "", serviceAddress: "" });
                                 }}
                               >
                                 Cancelar
